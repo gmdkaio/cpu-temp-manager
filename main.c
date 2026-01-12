@@ -5,24 +5,29 @@
 #include <stdbool.h> 
 
 int main() {
-    while(1) { // Infinite loop
-        FILE *fptr, *lptr; // File pointer(fptr) and Log pointer(lptr)
-        char buffer[16]; // Buffer to hold file content(16 bytes)
-        int raw_temp; 
-        float final_temp; 
-        bool alert_sent = false; // Flag to track high temp alert status - Prevent notifications spam
+    bool alert_sent = false; 
 
-        system("echo \"80000\" | sudo tee /tmp/fake_temp > /dev/null"); // TESTING ALERT - Create a fake temp file with 80C value
+    // Start zenity 
+    FILE *gui_pipe = popen("zenity --progress --title='CPU Temperature Monitor' --percentage=0 --no-cancel", "w");
+
+    if(gui_pipe == NULL){
+        perror("Could not open zenity pipe");
+        return 1;
+    }
+
+    while(1){
+        FILE *fptr, *lptr;
+        char buffer[16];
+        float final_temp;
 
         // --- READ LOGIC ---
         
         // fptr = fopen("/sys/class/hwmon/hwmon2/temp1_input", "r"); COMMENTED TO TEST ALERT | Open the temperature input file(AMD), the usual path is /sys/class/thermal/thermal_zone0/temp
         fptr = fopen("/tmp/fake_temp", "r"); // TESTING ALERT - Using a fake temp file 
-        if(fptr == NULL) return 1; // Exit if file not found
+        if(fptr == NULL) break;; // Exit if file not found
         fgets(buffer, 16, fptr); // Read the content into buffer
         fclose(fptr); // Close the file
         final_temp = atof(buffer) / 1000.0; // Convert to Celsius  
-        // printf("Current Temperature: %.2f°C\n", final_temp);  Print to console - Commented for gui preparation 
 
         // --- LOGGING LOGIC ---
 
@@ -37,20 +42,37 @@ int main() {
             fclose(lptr); 
         }
 
-        // --- ALERT LOGIC ---
 
-        if (final_temp > 70.0 && !alert_sent) {
-            char command[128];
-            snprintf(command, sizeof(command), "notify-send -u critical 'High CPU Temperature' 'Temperature: %.2f°C'", final_temp);
-            system(command);
+        // ---GUI LOGIC ---
+
+        // 1. Bar percentage
+        fprintf(gui_pipe, "%d\n", (int)(final_temp)); // Send the temperature as percentage to zenity
+
+        // 2. Label based on temp
+        if(final_temp > 70.0){
+            fprintf(gui_pipe, "# WARNING - HIGH TEMPERATURE!(%.2f °C)\n", final_temp);
+        } else {
+            fprintf(gui_pipe, "# Status - Normal(%.2f °C)\n", final_temp);
+        }
+
+        // Push data to zenity - If fails, probably the user closed the GUI
+        if (fflush(gui_pipe) != 0) {
+            fprintf(stderr, "\nGUI closed by user. Exiting...\n");
+            break;
+        }
+
+        // --- ALERT LOGIC ---
+        if(final_temp > 70.0 && !alert_sent){
+            system("zenity --warning --text='High Temp Detected' &");
             alert_sent = true;
         }
         else if (final_temp < 65.0){ // 65 for hysteresis purpose - prevent multiple alerts when temp hovers around threshold
-            alert_sent = false;
+            alert_sent = false; 
         }
-        
-        sleep(5); // Sleep for 5 seconds before next temp check 
+
+        sleep(1);
     }
-    
+
+    pclose(gui_pipe); // Close the zenity pipe
     return 0;
 }
