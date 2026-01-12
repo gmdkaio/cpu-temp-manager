@@ -34,7 +34,7 @@ int main() {
 
         // DESKTOP ALERT (if temp > 70C)
         if (final_temp > 70.0) {
-            printf("\r[%s] Current: %.2f°C", time_str, final_temp); // Print to console
+            printf("\r[%s] WARNING: %.2f°C", time_str, final_temp); // Print to console
             fflush(stdout); // Flush stdout to ensure immediate display
         }
         sleep(5); // Sleep for 5 seconds before next temp check 
