@@ -22,8 +22,8 @@ int main() {
         // LOGGING LOGIC
         time_t now = time(NULL); // Get current time
         struct tm *t = localtime(&now); // Convert to local time structure
-        char time_str[20]; // Buffer for formatted time
-        strftime(time_str, sizeof(time_str)-1, "%d-%m-%Y %H:%M:%S", t); // Format time
+        char time_str[64] = {0}; // Buffer for formatted time
+        strftime(time_str, sizeof(time_str), "%d-%m-%Y %H:%M:%S", t); // Format time
 
         // LOG FILE HANDLING(append)
         lptr = fopen("cpu_log.csv", "a"); // Open log file in append mode(csv because I wanna do some data analysis later)
