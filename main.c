@@ -16,6 +16,27 @@ int main() {
         if(fptr == NULL) return 1; // Exit if file not found
         fgets(buffer, 16, fptr); // Read the content into buffer
         fclose(fptr); // Close the file
-        final_temp = atof(buffer) / 1000.0; // Convert to Celsius   
+        final_temp = atof(buffer) / 1000.0; // Convert to Celsius  
+        printf("Current Temperature: %.2f°C\n", final_temp); // Print current temperature 
+
+        // LOGGING LOGIC
+        time_t now = time(NULL); // Get current time
+        struct tm *t = localtime(&now); // Convert to local time structure
+        char time_str[20]; // Buffer for formatted time
+        strftime(time_str, sizeof(time_str)-1, "%d-%m-%Y %H:%M:%S", t); // Format time
+
+        // LOG FILE HANDLING(append)
+        lptr = fopen("cpu_log.csv", "a"); // Open log file in append mode(csv because I wanna do some data analysis later)
+        if(lptr != NULL){
+            fprintf(lptr, "%s, %.2f\n", time_str, final_temp); // Write timestamp and temperature to log file
+            fclose(lptr); 
+        }
+
+        // DESKTOP ALERT (if temp > 70C)
+        if (final_temp > 70.0) {
+            printf("\r[%s] Current: %.2f°C", time_str, final_temp); // Print to console
+            fflush(stdout); // Flush stdout to ensure immediate display
+        }
+        sleep(5); // Sleep for 5 seconds before next temp check 
     }
 }
